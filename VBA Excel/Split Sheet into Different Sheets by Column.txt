@@ -1,0 +1,51 @@
+Sub splitsheets()
+
+
+'rename sheet
+
+ActiveSheet.Name = "Data"
+
+'split
+
+Dim lr As Long
+Dim ws As Worksheet
+Dim vcol, i As Integer
+Dim icol As Long
+Dim myarr As Variant
+Dim title As String
+Dim titlerow As Integer
+vcol = 15 'change number for column selection
+Set ws = Sheets("data")
+lr = ws.Cells(ws.Rows.Count, vcol).End(xlUp).Row
+title = "A1:H1"
+titlerow = ws.Range(title).Cells(1).Row
+icol = ws.Columns.Count
+ws.Cells(1, icol) = "Unique"
+For i = 2 To lr
+On Error Resume Next
+If ws.Cells(i, vcol) <> "" And Application.WorksheetFunction.Match(ws.Cells(i, vcol), ws.Columns(icol), 0) = 0 Then
+ws.Cells(ws.Rows.Count, icol).End(xlUp).Offset(1) = ws.Cells(i, vcol)
+End If
+Next
+myarr = Application.WorksheetFunction.Transpose(ws.Columns(icol).SpecialCells(xlCellTypeConstants))
+ws.Columns(icol).Clear
+For i = 2 To UBound(myarr)
+ws.Range(title).AutoFilter Field:=vcol, Criteria1:=myarr(i) & ""
+If Not Evaluate("=ISREF('" & myarr(i) & "'!A1)") Then
+Sheets.Add(After:=Worksheets(Worksheets.Count)).Name = Left(myarr(i), 12) 'change last number for left function
+Else
+Sheets(myarr(i) & "").Move After:=Worksheets(Worksheets.Count)
+End If
+ws.Range("A" & titlerow & ":A" & lr).EntireRow.Copy Sheets(myarr(i) & "").Range("A1")
+Sheets(myarr(i) & "").Columns.AutoFit
+
+'clear clipboard - can be removed
+Application.CutCopyMode = False
+
+Next
+ws.AutoFilterMode = False
+ws.Activate
+
+End Sub
+
+
