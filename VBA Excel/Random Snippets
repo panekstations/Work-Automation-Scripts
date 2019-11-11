@@ -1,0 +1,171 @@
+SELECT RANGE TO FURTHEST COLUMN WITH DATA
+Range("A9", Range("ZZ9").End(xlToLeft)).Select
+Will select row to very last column, ignoring blank cells in between
+
+SELECT CTL + DOWN
+Range(Selection, Selection.End(xlDown)).Select
+(Can use xlDown, xlToLeft, xlToRight, xlUp)
+
+SELECT RANGE TO FURTHEST ROW WITH DATA
+Range("A2", Range("A" & Rows.Count).End(xlup)).Select
+Will select row to very last row, ignoring blank cells in between
+
+SELECT CELL WITH OFFSET
+ActiveCell.End(xlDown).Offset(1, 1).Select
+Does a CTRL + Down and the goes 1 down and 1 right.  (vertical, horizontal move). You will get an error if you’re in first column and put a negative move number because there is nowhere to go. 
+
+ERROR MESSAGE AND QUIT IF MISSING DATA
+If IsEmpty(ActiveSheet.Range("C6")) Then
+            MsgBox ("You are missing rebates rates.")
+           Exit Sub
+End If
+
+ERROR MESSAGE AND CONTINUE IF MISSING DATA
+If IsEmpty(ActiveSheet.Range("C6")) Then
+            MsgBox ("You are missing rebates rates.")
+End If
+
+SELECT FOLDER FOR OUTPUT
+Dim FolderName As String
+With Application.FileDialog(msoFileDialogFolderPicker)
+  .AllowMultiSelect = False
+  .Show
+  On Error Resume Next
+  FolderName = .SelectedItems(1)
+  Err.Clear
+  On Error GoTo 0
+End With
+
+IF CELL EMPTY TAKE ACTION ELSE SKIP ACTION
+If IsEmpty(ActiveSheet.Range("A1")) Then
+    Range("C1").Select
+    ActiveCell.FormulaR1C1 = "Action Number 1"
+Exit Sub
+End If
+Range("D1").Select
+    ActiveCell.FormulaR1C1 = "Action Number 2"
+
+USING GO TO FUNCTION
+Sub test123()
+If IsEmpty(ActiveSheet.Range("A1")) Then GoTo ErrMessage
+GoTo NormalRun
+ErrMessage:
+    Range("C1").Select
+    ActiveCell.FormulaR1C1 = "A1 Blank"
+
+NormalRun:
+Range("C2").Select
+    ActiveCell.FormulaR1C1 = "Both Scenarios"
+If IsEmpty(ActiveSheet.Range("A1")) Then GoTo EndNow
+Range("D1").Select
+    ActiveCell.FormulaR1C1 = "A1 Not Blank"
+EndNow:
+End Sub
+
+CUSTOM FUNCTIONS WITH IF/ELSE
+Function REBATE(quantity, price)
+ If quantity >= 100 Then
+ REBATE = quantity * price * 0.95
+ Else
+ REBATE = quantity * price
+ End If
+ REBATE = Application.Round(REBATE, 2)
+End Function
+
+CREATE FUNCTION NORMAL CALCULATION
+Function YTDToBps(YTDAUM, YTDItem, Days, Year)
+YTDToBps = (YTDAUM / YTDItem) * 10000 * (Year / Days)
+End Function
+
+SUM ANY LENGTH COLUMN
+lastrow = Cells(Rows.Count, 3).End(xlUp).Row
+Cells(lastrow + 1, 12).Formula = "=sum(L2:L" & lastrow & ")"
+
+
+SET DIM AS LAST COL
+'defining last row for data adding purposes based on row 2
+
+    Dim LastCol As Long
+    With ActiveSheet
+        LastCol = .Cells(2, .Columns.Count).End(xlToLeft).Column
+    End With
+
+SET DIM AS LAST ROW
+
+    'defining last row for data adding purposes based on col K
+    
+    Dim LastRow As Long
+    With ActiveSheet
+        LastRow = .Cells(.Rows.Count, "K").End(xlUp).Row
+    End With
+
+COPY ITEM AT TOP OF COLUMN AND PASTE USING LASTROW DIM (ABOVE)
+    Range("M2").Select
+    Selection.Copy
+    Range("M2:M" & LastRow).Select
+    ActiveSheet.Paste
+
+SET DIM USING POPUP BOX
+    Dim postdate As Variant
+    postdate = InputBox("Enter the expected posting date in DD/MM/YYYY format.")
+
+
+SORT DATA BY COLUMN ASCENDING
+    Dim strDataRange As Range
+    Dim keyRange As Range
+    Set strDataRange = Range("A:L")
+    Set keyRange = Range("I:I")
+    strDataRange.Sort Key1:=keyRange, Order1:=xlAscending, Header:=xlYes
+
+WEBSCRAPING – WEB QUERY
+
+
+Sub scrape()
+Dim i As Integer
+For i = 1 To 10
+Dim MyRNG As Range
+Set MyRNG = Sheets("source").Cells(i, 6)
+
+Dim MyRNG2 As Range
+Set MyRNG2 = Sheets("source").Cells(i, 7)
+
+Dim MyRNG3 As Range
+Set MyRNG3 = Sheets("transform").Cells(7, 2)
+
+
+'
+    With ActiveSheet.QueryTables.Add(Connection:= _
+        "URL;" & MyRNG _
+        , Destination:=Range("$A$1"))
+        '.CommandType = 0
+        .Name = MyRNG2
+        .FieldNames = True
+        .RowNumbers = False
+        .FillAdjacentFormulas = False
+        .PreserveFormatting = True
+        .RefreshOnFileOpen = False
+        .BackgroundQuery = True
+        .RefreshStyle = xlInsertDeleteCells
+        .SavePassword = False
+        .SaveData = True
+        .AdjustColumnWidth = True
+        .RefreshPeriod = 0
+        .WebSelectionType = xlSpecifiedTables
+        .WebFormatting = xlWebFormattingNone
+        .WebTables = """alt"""
+        .WebPreFormattedTextToColumns = True
+        .WebConsecutiveDelimitersAsOne = True
+        .WebSingleBlockTextImport = False
+        .WebDisableDateRecognition = False
+        .WebDisableRedirections = False
+        .Refresh BackgroundQuery:=False
+    End With
+    
+    Sheets("source").Cells(i, 8).Value = MyRNG3
+    
+    Worksheets("transform").Activate
+    Range("A:H").Delete
+    
+    
+    Next i
+End Sub
