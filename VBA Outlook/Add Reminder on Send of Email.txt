@@ -1,0 +1,142 @@
+
+'Paste into Outlooks VBA Editor into 'ThisOutlookSession'
+'
+
+Private WithEvents CalItems As Outlook.Items
+Private WithEvents MailItems As Outlook.Items
+
+
+Private Sub Application_Startup()
+    Dim NS As Outlook.NameSpace
+    Set NS = Application.GetNamespace("MAPI")
+    Set CalItems = NS.GetDefaultFolder(olFolderCalendar).Items
+    Set MailItems = NS.GetDefaultFolder(olFolderInbox).Items
+'    If MsgBox("Print Todays Calendar?", vbYesNo) = vbYes Then
+'        printCalendar
+'    End If
+End Sub
+
+Private Sub CalItems_ItemAdd(ByVal item As Object)
+    On Error Resume Next
+    Dim Appt As Outlook.AppointmentItem
+    If TypeOf item Is Outlook.AppointmentItem Then
+        Set Appt = item
+        If Appt.ReminderSet = False Then
+            If MsgBox("Would you like to set a reminder?", vbYesNo) = vbYes Then
+                Appt.ReminderSet = True
+                Appt.ReminderMinutesBeforeStart = 15
+                Appt.Save
+            End If
+        End If
+    End If
+End Sub
+
+Private Sub MailItems_ItemAdd(ByVal item As Object)
+    Dim objAtt As Outlook.Attachment
+    Dim saveFile As String
+    Dim dateFormat As String
+    dateFormat = Format(item.ReceivedTime, "yyyymmdd")
+    Dim saveFolder As String
+    saveFolder = "C:\RGFolders\OutlookAttachments" & "\" & dateFormat
+    If (Dir$(saveFolder, vbDirectory) = "") Then
+        MkDir saveFolder
+    End If
+    For Each objAtt In item.Attachments
+        saveFile = saveFolder & "\" & objAtt.DisplayName
+        objAtt.SaveAsFile saveFile
+        'MsgBox ("Saved " & saveFile)
+    Next
+End Sub
+
+
+Private Sub Application_ItemSend(ByVal item As Object, cancel As Boolean)
+    Dim olApp   As Outlook.Application
+    Dim olTask  As Outlook.TaskItem
+    'Dim olMessage As Outlook.MailItem
+    'olMessage.To
+    If TypeOf item Is Outlook.MailItem Then
+        If item.Subject = "" Then
+            If MsgBox("This message has no subject, are you sure you want to send it?", vbYesNo + vbQuestion, "Confirm") = vbNo Then
+                cancel = True
+            End If
+        End If
+        If MsgBox("Create A Follow Up Task?", vbYesNo) = vbYes Then
+            Set olApp = Application
+            Set olTask = olApp.CreateItem(olTaskItem)
+            olTask.Subject = "Follow Up : " & item.To & " : About : " & item.Subject
+            If Format(item.SentOn, "dd/mm/yyyy") = "01/01/4501" Then
+                dateSent = Now
+            Else
+                dateSent = item.SentOn
+            End If
+            olTask.Body = olTask.Body & "Sent : " & Format(dateSent, "dd MMMM yyyy hh:mm:ss") & vbCrLf
+            olTask.Body = olTask.Body & "To : " & item.To & vbCrLf
+            olTask.Body = olTask.Body & "Subject : " & item.Subject & vbCrLf
+            olTask.Body = olTask.Body & "Body : " & item.Body & vbCrLf
+            'olTask.ContactNames = Item.To
+            olTask.Categories = Replace(item.To, ",", "-")
+            'MsgBox (Item.To)
+            olTask.DueDate = Date + 1
+            olTask.Status = olTaskWaiting
+            olTask.Display
+            olTask.Save
+        End If
+    End If
+End Sub
+
+
+
+Public Sub printCalendar()
+SendKeys "^2", True 'Select Calendar
+SendKeys "%o", False 'Select Today
+SendKeys "^p", False 'Print
+SendKeys "%y", False 'Print Style
+SendKeys "tri", False
+SendKeys "{Enter}", False
+End Sub
+
+
+Public Sub TaskFromMail()
+    Dim cancel As Boolean
+    If TypeName(Application.ActiveWindow) = "Inspector" Then
+        Set item = Application.ActiveWindow.CurrentItem
+        'MsgBox ("Subject : " & item.Subject)
+        Call Application_ItemSend(item, cancel)
+    End If
+End Sub
+
+
+Public Sub FindTask()
+    If TypeName(Application.ActiveWindow) = "Inspector" Then
+        Set item = Application.ActiveWindow.CurrentItem
+        'MsgBox ("Subject : " & item.Subject)
+        Call FindATask(item.Subject)
+    End If
+End Sub
+
+
+Private Sub FindATask(pTaskName)
+Dim NS  As Outlook.NameSpace
+Dim TaskF   As Outlook.MAPIFolder
+Dim Tasks   As Outlook.Items
+Dim Task, FoundTask As Outlook.TaskItem
+Dim shortTaskName As String
+Set NS = Application.GetNamespace("MAPI")
+Set TaskF = NS.GetDefaultFolder(olFolderTasks)
+Set Tasks = TaskF.Items.Restrict("[Complete]=no")
+If InStr(1, pTaskName, "RE:") = 1 Then
+    shortTaskName = Mid(pTaskName, 5)
+Else
+    shortTaskName = pTaskName
+End If
+'MsgBox ("Searching For Task  : " & shortTaskName)
+For Each Task In Tasks
+    'MsgBox (Task.Subject & ":" & Task.Complete)
+    If InStr(1, Task.Subject, shortTaskName) > 0 Then
+        Set FoundTask = Task
+        Exit For
+    End If
+Next
+'MsgBox ("Search Finished : " & FoundTask.Subject)
+FoundTask.Display
+End Sub
