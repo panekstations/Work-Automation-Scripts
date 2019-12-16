@@ -1,0 +1,28 @@
+'Save in ThisOutlookSession and run it to start listening to folder
+
+Private WithEvents deletedItems As Outlook.Items
+Private WithEvents mainInboxItems As Outlook.Items
+
+Public Sub Application_Startup()
+
+    Dim olApp As Outlook.Application
+    Dim objNS As Outlook.NameSpace
+    Set olApp = Outlook.Application
+    Set objNS = olApp.GetNamespace("MAPI")
+
+    Set deletedItems = objNS.GetDefaultFolder(olFolderDeletedItems).Items
+    Set mainInboxItems = objNS.GetDefaultFolder(olFolderInbox).Folders("Subfolder Name").Items
+    'assumes your "Subfolder Name" folder is a subfolder of the main inbox
+    
+End Sub
+
+
+Private Sub deletedItems_ItemAdd(ByVal item As Object)
+'do Stuff to mailitem
+End Sub
+Private Sub mainInboxItems_ItemAdd(ByVal item As Object)
+
+'call other macro that has been built
+Call AutoSaveFile 
+
+End Sub
